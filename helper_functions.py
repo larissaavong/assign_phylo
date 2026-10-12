@@ -71,9 +71,82 @@ def neighbor_joining(distances: np.ndarray, labels: list) -> Node:
 
     """
     
-    self.tree = Node()
+    # self.tree = Node()
+    n = len(labels)
+    
+    leaf_nodes = []
+    for label in labels:
+        leaf_nodes.append(Node(label, None, 0.0, None, 0.0))
 
-    raise NotImplementedError()
+    dist = np.array(distances, dtype=float)
+    node_counter = 1
+
+    while n > 2:
+        # calculate sum of each row 
+        sum_of_distances = np.sum(dist, axis=1)
+
+        # calculate adjusted distance matrix (Q)
+        Q_matrix = np.zeros((n, n), dtype=float)
+        for i in range(n):
+            for j in range(i, n):
+                if i == j:
+                    Q_matrix[i][j] = np.inf
+                else:
+                    Q_matrix[i][j] = (n - 2) * dist[i, j] - sum_of_distances[i] - sum_of_distances[j]
+                    Q_matrix[j][i] = Q_matrix[i][j]
+
+        # find distinct nodes i != j for which Q(i, j) is minimal
+        flat_index = np.argmin(Q_matrix)
+        i, j = np.unravel_index(flat_index, Q_matrix.shape)
+
+        if i > j:
+            i, j = j, i
+
+        delta_i = 0.5 * dist[i, j] + 1/(2 * (n - 2)) * (sum_of_distances[i] - sum_of_distances[j])
+        delta_j = dist[i, j] - delta_i
+
+        left_child = leaf_nodes[i]
+        right_child = leaf_nodes[j]
+
+        node_name = f"node{node_counter}"
+        new_node = Node(node_name, left_child, delta_i, right_child, delta_j)
+        node_counter += 1
+
+        # remove left and right child from leaf_node list + append new_node to leaf 
+        leaf_nodes.remove(left_child)
+        leaf_nodes.remove(right_child)
+        leaf_nodes.append(new_node)
+
+        # get list of all indices that are not being currently merged 
+        remaining_indices = []
+        for k in range(n):
+            if k != i and k != j:
+                remaining_indices.append(k)
+
+        # distance between every node and merged node
+        new_distance = []
+        for k in remaining_indices:
+            distance = 0.5 * (dist[i, k] + dist[j, k] - dist[i, j])
+            new_distance.append(distance)
+
+        reduced_distances = dist[np.ix_(remaining_indices, remaining_indices)]
+        new_distance = np.array(new_distance)
+
+        new_n = n - 1
+        updated_dist = np.zeros((new_n, new_n))
+        updated_dist[:-1, :-1] = reduced_distances
+
+        updated_dist[:-1, -1] = new_distance
+        updated_dist[-1, :-1] = new_distance
+        updated_dist[-1, -1] = 0.0
+
+        dist = updated_dist
+        n -= 1
+
+    final_dist = dist[0, 1] / 2
+    root = Node("root", leaf_nodes[0], final_dist, leaf_nodes[1], final_dist)
+
+    return root
 
 
 def plot_nj_tree(tree: Node, ax: Axes = None, **kwargs) -> None:
