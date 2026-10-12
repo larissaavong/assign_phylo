@@ -1,5 +1,6 @@
 """Helper functions for HW3"""
 import numpy as np
+import matplotlib.pyplot as plt
 from copy import deepcopy
 from matplotlib.axes import Axes
 
@@ -172,9 +173,63 @@ def plot_nj_tree(tree: Node, ax: Axes = None, **kwargs) -> None:
     >>> fig.savefig("example.png")
 
     """
+    if ax is None:
+        _, ax = plt.subplots(figsize=(8, 8))
+
+    leaf_positions = {}
+    def assign_positions(node):
+        if node.left is None and node.right is None:
+            leaf_positions[node.name] = len(leaf_positions)
+        else:
+            assign_positions(node.left)
+            assign_positions(node.right)
+
+    assign_positions(tree)
+
+    def get_y_pos(node: Node):
+        """
+            Returns the position of the internal node, given that it is located 
+            halfway between its children 
+        """
+        if node.left is None and node.right is None:
+            return leaf_positions[node.name]
+
+        left_y = get_y_pos(node.left)
+        right_y = get_y_pos(node.right)
+        return (left_y + right_y) / 2
+
+    def draw_each_node(node: Node, x):
+        y = get_y_pos(node)
+
+        if node.left is None and node.right is None:
+            ax.text(x, y, f" {node.name}")
+            return
+
+        # total length of child branch = curr node + child branch length 
+        left_child_x = x + node.left_distance
+        right_child_x = x + node.right_distance
+
+        left_child_y = get_y_pos(node.left)
+        right_child_y = get_y_pos(node.right)
+
+        # plot horizontal branches
+        ax.plot([x, left_child_x], [left_child_y, left_child_y], color='k')
+        ax.plot([x, right_child_x], [right_child_y, right_child_y], color='k')
+
+        # connect branches vertically
+        ax.plot([x, x], [left_child_y, right_child_y], color='k')
+
+        draw_each_node(node.left, left_child_x)
+        draw_each_node(node.right, right_child_x)
+
+    draw_each_node(tree, 0.0)
+
+    ax.set_xlabel("Genetic Distance")
+    ax.set_ylabel("Ground Truth")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
 
     return ax
-
 
 def _find_a_parent_to_node(tree: Node, node: Node) -> tuple:
     """Utility function for reroot_tree"""
