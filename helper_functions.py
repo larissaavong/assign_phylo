@@ -309,6 +309,17 @@ def reroot_tree(original_tree: Node, outgroup_node: Node) -> Node:
 
     return new_root
 
+def _count_leaves(node: Node) -> int:
+    """
+        Recursively counts the number of leaf nodes each tree has
+    """
+    if node is None:
+        return 0
+    
+    if node.left is None and node.right is None:
+        return 1
+
+    return _count_leaves(node.left) + _count_leaves(node.right)
 
 def sort_children_by_leaves(tree: Node) -> None:
     """Sort the children of a tree by their corresponding number of leaves.
@@ -321,8 +332,21 @@ def sort_children_by_leaves(tree: Node) -> None:
         The root node of the tree.
 
     """
-    raise NotImplementedError()
+    if tree is None:
+        return
 
+    if tree.left is None and tree.right is None:
+        return 
+
+    sort_children_by_leaves(tree.left)
+    sort_children_by_leaves(tree.right)
+
+    left_count = _count_leaves(tree.left)
+    right_count = _count_leaves(tree.right)
+
+    if left_count > right_count:
+        tree.left, tree.right = tree.right, tree.left
+    
 
 def plot_nj_tree_radial(tree: Node, ax: Axes = None, **kwargs) -> None:
     """A function for plotting neighbor joining phylogeny dendrogram
